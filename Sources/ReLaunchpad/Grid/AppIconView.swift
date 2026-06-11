@@ -42,6 +42,9 @@ struct AppIconView: View {
         .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
             isPressed = pressing
         }, perform: {})
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(app.name)
+        .accessibilityAddTraits(.isButton)
         .contextMenu {
             Button("在 Finder 中显示") {
                 NSWorkspace.shared.activateFileViewerSelecting([app.url])

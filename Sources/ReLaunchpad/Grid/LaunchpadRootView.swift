@@ -180,16 +180,31 @@ struct LaunchpadRootView: View {
     }
 
     private var pageDots: some View {
-        HStack(spacing: 10) {
-            ForEach(0..<max(viewModel.pageCount, 1), id: \.self) { page in
+        let count = max(viewModel.pageCount, 1)
+        let dotSize: CGFloat = 7
+        let spacing: CGFloat = 10
+        return HStack(spacing: spacing) {
+            ForEach(0..<count, id: \.self) { page in
                 Circle()
                     .fill(.white.opacity(page == viewModel.currentPage ? 0.95 : 0.35))
-                    .frame(width: 7, height: 7)
-                    .contentShape(Circle().scale(2.5))
-                    .onTapGesture { viewModel.goToPage(page) }
+                    .frame(width: dotSize, height: dotSize)
             }
         }
-        .padding(.top, 18)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .contentShape(Rectangle())
+        // Press selects, and scrubbing across the dots flips pages live —
+        // matching the original's indicator behavior.
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    let span = dotSize + spacing
+                    let page = Int((value.location.x - 12 + spacing / 2) / span)
+                    viewModel.goToPage(min(count - 1, max(0, page)))
+                }
+        )
+        .accessibilityLabel("第 \(viewModel.currentPage + 1) 页,共 \(count) 页")
+        .padding(.top, 10)
         .opacity(viewModel.openFolder == nil ? 1 : 0)
     }
 }

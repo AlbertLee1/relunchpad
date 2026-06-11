@@ -27,6 +27,9 @@ struct FolderIconView: View {
                 .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
                 .lineLimit(1)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("文件夹 \(folder.name),\(folder.items.count) 个应用")
+        .accessibilityAddTraits(.isButton)
     }
 
     private var miniGrid: some View {

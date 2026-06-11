@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import ReLaunchpad
 
@@ -60,5 +61,34 @@ import Testing
         let result = Layout.reconciled(layout, installed: ["a"], slotsPerPage: slotsPerPage)
         #expect(result.pages.count == 1)
         #expect(result.pages[0].count == 1)
+    }
+}
+
+@Suite struct SearchRankerTests {
+    let apps = [
+        AppItem(id: "1", name: "Safari", url: URL(fileURLWithPath: "/a")),
+        AppItem(id: "2", name: "App Store", url: URL(fileURLWithPath: "/b")),
+        AppItem(id: "3", name: "Final Cut Pro", url: URL(fileURLWithPath: "/c")),
+        AppItem(id: "4", name: "Visual Studio Code", url: URL(fileURLWithPath: "/d")),
+    ]
+
+    @Test func prefixBeatsWordPrefixBeatsSubstring() {
+        let results = SearchRanker.filter(apps, query: "s")
+        #expect(results.map(\.name) == ["Safari", "App Store", "Visual Studio Code"])
+    }
+
+    @Test func caseInsensitive() {
+        #expect(SearchRanker.filter(apps, query: "SAFARI").map(\.name) == ["Safari"])
+    }
+
+    @Test func emptyQueryReturnsNothing() {
+        #expect(SearchRanker.filter(apps, query: "  ").isEmpty)
+    }
+
+    @Test func chunkingSplitsIntoPages() {
+        let slots: [Slot] = (0..<5).map { .app(bundleID: "\($0)") }
+        let pages = SearchRanker.chunked(slots, size: 2)
+        #expect(pages.count == 3)
+        #expect(pages[2] == [.app(bundleID: "4")])
     }
 }

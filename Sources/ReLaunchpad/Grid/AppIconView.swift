@@ -3,6 +3,7 @@ import SwiftUI
 struct AppIconView: View {
     let app: AppItem
     let iconSide: CGFloat
+    var isSelected = false
 
     @State private var isPressed = false
 
@@ -19,6 +20,11 @@ struct AppIconView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
         }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(.white.opacity(isSelected ? 0.22 : 0))
+        )
         .scaleEffect(isPressed ? 0.92 : 1.0)
         .animation(.easeOut(duration: 0.1), value: isPressed)
         .onTapGesture {

@@ -5,6 +5,7 @@ import SwiftUI
 struct PageGridView: View {
     let slots: [Slot]
     let grid: GridConfig
+    var selectedIndex: Int? = nil
 
     @ObservedObject private var library = AppLibrary.shared
 
@@ -16,7 +17,7 @@ struct PageGridView: View {
 
             ZStack {
                 ForEach(Array(slots.enumerated()), id: \.offset) { index, slot in
-                    slotView(slot, iconSide: iconSide)
+                    slotView(slot, iconSide: iconSide, isSelected: index == selectedIndex)
                         .frame(width: cellWidth, height: cellHeight)
                         .position(
                             x: (CGFloat(index % grid.columns) + 0.5) * cellWidth,
@@ -28,11 +29,11 @@ struct PageGridView: View {
     }
 
     @ViewBuilder
-    private func slotView(_ slot: Slot, iconSide: CGFloat) -> some View {
+    private func slotView(_ slot: Slot, iconSide: CGFloat, isSelected: Bool) -> some View {
         switch slot {
         case .app(let bundleID):
             if let app = library.app(for: bundleID) {
-                AppIconView(app: app, iconSide: iconSide)
+                AppIconView(app: app, iconSide: iconSide, isSelected: isSelected)
             }
         case .folder:
             // Folders arrive in M3.

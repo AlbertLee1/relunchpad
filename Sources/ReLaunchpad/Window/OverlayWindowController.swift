@@ -16,6 +16,7 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
     private var window: OverlayWindow?
     private var hideWorkItem: DispatchWorkItem?
     private var scrollMonitor: Any?
+    private var keyMonitor: Any?
 
     static let animationDuration: TimeInterval = 0.18
 
@@ -38,12 +39,22 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
 
+        LaunchpadViewModel.shared.reset()
+
         if scrollMonitor == nil {
             scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
                 if event.window === self.window {
                     LaunchpadViewModel.shared.handleScroll(event)
                 }
                 return event
+            }
+        }
+        // A local monitor sees keys before the focused search field does,
+        // letting arrows/Enter/Esc drive navigation while typing stays in the field.
+        if keyMonitor == nil {
+            keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                guard event.window === self.window else { return event }
+                return LaunchpadViewModel.shared.handleKey(event) ? nil : event
             }
         }
 
@@ -63,6 +74,10 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
         if let scrollMonitor {
             NSEvent.removeMonitor(scrollMonitor)
             self.scrollMonitor = nil
+        }
+        if let keyMonitor {
+            NSEvent.removeMonitor(keyMonitor)
+            self.keyMonitor = nil
         }
         let item = DispatchWorkItem { [weak self] in
             self?.window?.orderOut(nil)
@@ -99,7 +114,6 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
         window.animationBehavior = .none
         window.delegate = self
         window.onEscape = { [weak self] in self?.hide() }
-        window.keyHandler = { LaunchpadViewModel.shared.handleKey($0) }
 
         let root = LaunchpadRootView(
             state: state,

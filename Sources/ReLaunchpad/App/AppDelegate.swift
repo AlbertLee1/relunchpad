@@ -7,9 +7,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         AppLibrary.shared.start()
 
-        if CommandLine.arguments.contains("--show") {
+        // Debug helpers for automated verification:
+        //   --show          opens the overlay shortly after launch
+        //   --search <text> additionally types into the search field
+        let args = CommandLine.arguments
+        if args.contains("--show") {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 OverlayWindowController.shared.show()
+                if let flag = args.firstIndex(of: "--search"), args.indices.contains(flag + 1) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        LaunchpadViewModel.shared.searchText = args[flag + 1]
+                    }
+                }
             }
         }
     }

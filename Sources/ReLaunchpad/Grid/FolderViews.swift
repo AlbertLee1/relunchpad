@@ -86,7 +86,13 @@ struct FolderOpenView: View {
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28))
         )
         .onAppear { editedName = folder.name }
-        .onDisappear { commitName() }
+        .onDisappear {
+            commitName()
+            viewModel.isRenamingFolder = false
+        }
+        .onChange(of: nameFocused) { _, focused in
+            viewModel.isRenamingFolder = focused
+        }
     }
 
     private func commitName() {

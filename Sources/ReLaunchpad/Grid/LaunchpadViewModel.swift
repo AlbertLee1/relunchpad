@@ -24,6 +24,8 @@ final class LaunchpadViewModel: ObservableObject {
     @Published var openFolderAnchor: UnitPoint = .center
     /// Jiggle (edit) mode: icons wobble and removable apps show a ✕ badge.
     @Published var isJiggling = false
+    /// The open folder's rename field has keyboard focus.
+    @Published var isRenamingFolder = false
 
     var isSearching: Bool { !searchText.isEmpty }
 
@@ -81,6 +83,12 @@ final class LaunchpadViewModel: ObservableObject {
             }
             OverlayWindowController.shared.hide()
             return true
+        }
+
+        // While a folder is open, keys must not leak into the (hidden) search
+        // field behind it — unless the rename field is being edited.
+        if openFolder != nil {
+            return !isRenamingFolder
         }
 
         if isSearching {

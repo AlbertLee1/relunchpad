@@ -12,6 +12,26 @@
 | 触发角 | 关闭 | 设置中选择屏幕角落,停留 0.25s 触发 |
 | 触控板抓拢手势 | 五指 | 抓拢打开、张开关闭,需要「输入监控」权限 |
 
+## 安装(普通用户)
+
+**方式一:一条命令安装(推荐)**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AlbertLee1/relunchpad/main/Scripts/install.sh | bash
+```
+
+自动下载最新 Release、安装到 /Applications、处理 Gatekeeper 拦截并启动。
+
+**方式二:手动安装**
+
+1. 到 [Releases](https://github.com/AlbertLee1/relunchpad/releases) 下载 `ReLaunchpad-x.y.z.zip` 并解压
+2. 把 `ReLaunchpad.app` 拖入「应用程序」文件夹
+3. 本应用未经 Apple 公证,首次打开若被拦截,任选其一:
+   - 终端执行 `xattr -d com.apple.quarantine /Applications/ReLaunchpad.app`
+   - 或 系统设置 > 隐私与安全性 > 拉到底部点「仍要打开」
+
+首次启动会弹出**使用引导**,介绍四种唤起方式与权限授权入口(之后可从菜单栏图标 → 使用引导 再次打开)。
+
 ## 构建与运行
 
 ```bash

@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(Preferences.showDockIcon ? .regular : .accessory)
         AppLibrary.shared.start()
         TriggerCoordinator.shared.start()
+        WelcomeWindowController.shared.showIfFirstRun()
 
         // Debug helpers for automated verification:
         //   --show          opens the overlay shortly after launch

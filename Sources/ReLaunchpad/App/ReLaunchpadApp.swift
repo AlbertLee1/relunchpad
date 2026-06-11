@@ -13,6 +13,9 @@ struct ReLaunchpadApp: App {
                 SettingsWindowController.shared.show()
             }
             .keyboardShortcut(",")
+            Button("使用引导") {
+                WelcomeWindowController.shared.show()
+            }
             Divider()
             Button("退出 ReLaunchpad") {
                 NSApp.terminate(nil)

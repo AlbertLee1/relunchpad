@@ -46,6 +46,11 @@ enum Preferences {
         set { defaults.set(newValue, forKey: "showDockIcon") }
     }
 
+    static var hasSeenWelcome: Bool {
+        get { defaults.bool(forKey: "hasSeenWelcome") }
+        set { defaults.set(newValue, forKey: "hasSeenWelcome") }
+    }
+
     static var gridColumns: Int {
         get { max(4, min(12, defaults.object(forKey: "gridColumns") as? Int ?? 7)) }
         set { defaults.set(max(4, min(12, newValue)), forKey: "gridColumns") }

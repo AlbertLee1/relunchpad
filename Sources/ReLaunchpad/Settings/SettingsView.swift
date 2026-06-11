@@ -14,6 +14,7 @@ struct SettingsView: View {
     @State private var gridColumns = Preferences.gridColumns
     @State private var gridRows = Preferences.gridRows
     @State private var launchAtLogin = LoginItem.isEnabled
+    @State private var showResetConfirm = false
 
     var body: some View {
         Form {
@@ -93,6 +94,20 @@ struct SettingsView: View {
                         LoginItem.set(value)
                         launchAtLogin = LoginItem.isEnabled
                     }
+                LabeledContent("图标排列") {
+                    Button("重置布局…") { showResetConfirm = true }
+                }
+                .confirmationDialog(
+                    "重置图标布局?",
+                    isPresented: $showResetConfirm
+                ) {
+                    Button("重置(系统应用优先,按名称排序)", role: .destructive) {
+                        AppLibrary.shared.resetLayout()
+                    }
+                    Button("取消", role: .cancel) {}
+                } message: {
+                    Text("将丢弃当前排序与所有文件夹。")
+                }
             }
         }
         .formStyle(.grouped)

@@ -94,9 +94,27 @@ struct FolderOpenView: View {
         nameFocused = false
     }
 
+    /// Rows shown before the panel scrolls instead of growing past the screen.
+    private static let maxVisibleRows = 4
+
+    @ViewBuilder
     private var folderGrid: some View {
         let grid = drag.folderGrid(forCount: folder.items.count)
         let cell: CGFloat = 130
+        if grid.rows > Self.maxVisibleRows {
+            ScrollView(.vertical, showsIndicators: false) {
+                folderGridContent(grid: grid, cell: cell)
+            }
+            .frame(
+                width: CGFloat(grid.columns) * cell,
+                height: CGFloat(Self.maxVisibleRows) * cell
+            )
+        } else {
+            folderGridContent(grid: grid, cell: cell)
+        }
+    }
+
+    private func folderGridContent(grid: GridConfig, cell: CGFloat) -> some View {
         let width = CGFloat(grid.columns) * cell
         let height = CGFloat(grid.rows) * cell
 

@@ -40,6 +40,13 @@ final class AppLibrary: ObservableObject {
         store.save(newLayout)
     }
 
+    /// Discards the saved arrangement and rebuilds the default one
+    /// (system apps first, then alphabetical).
+    func resetLayout() {
+        layout = Layout(pages: [[]])
+        apply(Array(appsByID.values))
+    }
+
     /// Removes a (just-trashed) app from the model and layout immediately,
     /// without waiting for the Spotlight update.
     func removeEverywhere(bundleID: String) {

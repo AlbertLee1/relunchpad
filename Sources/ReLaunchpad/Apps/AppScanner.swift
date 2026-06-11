@@ -18,6 +18,33 @@ final class AppScanner: NSObject {
         "/System/Cryptexes/App/System/Applications", // Safari lives here
     ]
 
+    /// Built-in apps living outside Spotlight-indexed roots.
+    nonisolated static let extraRoots = [
+        "/System/Library/CoreServices/Applications", // Screen Sharing, Directory Utility…
+    ]
+    nonisolated static let extraApps = [
+        "/System/Library/CoreServices/Finder.app",
+    ]
+
+    /// Finder and friends — merged into every scan since NSMetadataQuery
+    /// cannot see them.
+    nonisolated static func wellKnownApps() -> [AppItem] {
+        let fm = FileManager.default
+        var paths = extraApps
+        for root in extraRoots {
+            let children = (try? fm.contentsOfDirectory(atPath: root)) ?? []
+            paths += children.filter { $0.hasSuffix(".app") }.map { root + "/" + $0 }
+        }
+        return paths.compactMap { path in
+            guard let bundle = Bundle(path: path), let id = bundle.bundleIdentifier else { return nil }
+            return AppItem(
+                id: id,
+                name: fm.displayName(atPath: path),
+                url: URL(fileURLWithPath: path)
+            )
+        }
+    }
+
     func start() {
         query.predicate = NSPredicate(
             format: "kMDItemContentTypeTree == %@", "com.apple.application-bundle"
@@ -56,7 +83,7 @@ final class AppScanner: NSObject {
             items.append(AppItem(id: bundleID, name: name, url: URL(fileURLWithPath: path)))
         }
         if !items.isEmpty {
-            onUpdate?(Self.deduplicated(items))
+            onUpdate?(Self.deduplicated(items + Self.wellKnownApps()))
         }
     }
 
@@ -82,7 +109,7 @@ final class AppScanner: NSObject {
                 }
             }
         }
-        return deduplicated(items)
+        return deduplicated(items + wellKnownApps())
     }
 
     /// Keeps the first occurrence per bundle ID, preferring earlier search roots.

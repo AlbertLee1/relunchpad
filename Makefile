@@ -14,8 +14,17 @@ app:
 run: app
 	open ReLaunchpad.app
 
+# CLT keeps Testing.framework and its lib_TestingInterop.dylib in places the
+# default test runner does not search; pass them explicitly.
+CLT_FRAMEWORKS := /Library/Developer/CommandLineTools/Library/Developer/Frameworks
+CLT_TESTLIBS := /Library/Developer/CommandLineTools/Library/Developer/usr/lib
+
 test:
-	swift test
+	swift test \
+		-Xswiftc -F$(CLT_FRAMEWORKS) \
+		-Xlinker -F$(CLT_FRAMEWORKS) \
+		-Xlinker -rpath -Xlinker $(CLT_FRAMEWORKS) \
+		-Xlinker -rpath -Xlinker $(CLT_TESTLIBS)
 
 clean:
 	rm -rf .build ReLaunchpad.app

@@ -4,6 +4,8 @@ import AppKit
 /// keyboard focus) and routes Esc to a dismiss handler.
 final class OverlayWindow: NSWindow {
     var onEscape: (() -> Void)?
+    /// Returns true when the event was consumed (paging, search navigation).
+    var keyHandler: ((NSEvent) -> Bool)?
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
@@ -13,6 +15,7 @@ final class OverlayWindow: NSWindow {
             onEscape?()
             return
         }
+        if keyHandler?(event) == true { return }
         super.keyDown(with: event)
     }
 

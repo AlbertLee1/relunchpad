@@ -15,6 +15,7 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
     let state = OverlayState()
     private var window: OverlayWindow?
     private var hideWorkItem: DispatchWorkItem?
+    private var scrollMonitor: Any?
 
     static let animationDuration: TimeInterval = 0.18
 
@@ -25,6 +26,7 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
     }
 
     func show() {
+        NSLog("ReLaunchpad: show()")
         hideWorkItem?.cancel()
         hideWorkItem = nil
 
@@ -35,6 +37,15 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
         state.isPresented = false
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+
+        if scrollMonitor == nil {
+            scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
+                if event.window === self.window {
+                    LaunchpadViewModel.shared.handleScroll(event)
+                }
+                return event
+            }
+        }
 
         // Flip on the next runloop tick so SwiftUI animates from the closed state.
         DispatchQueue.main.async { [self] in
@@ -49,6 +60,10 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
         withAnimation(.easeIn(duration: Self.animationDuration)) {
             state.isPresented = false
         }
+        if let scrollMonitor {
+            NSEvent.removeMonitor(scrollMonitor)
+            self.scrollMonitor = nil
+        }
         let item = DispatchWorkItem { [weak self] in
             self?.window?.orderOut(nil)
             self?.hideWorkItem = nil
@@ -60,6 +75,7 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
     // MARK: - NSWindowDelegate
 
     func windowDidResignKey(_ notification: Notification) {
+        NSLog("ReLaunchpad: windowDidResignKey -> hide")
         hide()
     }
 
@@ -83,6 +99,7 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
         window.animationBehavior = .none
         window.delegate = self
         window.onEscape = { [weak self] in self?.hide() }
+        window.keyHandler = { LaunchpadViewModel.shared.handleKey($0) }
 
         let root = LaunchpadRootView(
             state: state,

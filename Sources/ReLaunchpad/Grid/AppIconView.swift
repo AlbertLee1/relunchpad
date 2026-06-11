@@ -1,0 +1,31 @@
+import SwiftUI
+
+struct AppIconView: View {
+    let app: AppItem
+    let iconSide: CGFloat
+
+    @State private var isPressed = false
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Image(nsImage: IconCache.shared.icon(forAppAt: app.url))
+                .resizable()
+                .interpolation(.high)
+                .frame(width: iconSide, height: iconSide)
+            Text(app.name)
+                .font(.system(size: 13))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+        .scaleEffect(isPressed ? 0.92 : 1.0)
+        .animation(.easeOut(duration: 0.1), value: isPressed)
+        .onTapGesture {
+            AppLibrary.shared.launch(app.id)
+        }
+        .onLongPressGesture(minimumDuration: .infinity, pressing: { pressing in
+            isPressed = pressing
+        }, perform: {})
+    }
+}

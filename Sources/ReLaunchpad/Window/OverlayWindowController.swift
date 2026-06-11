@@ -27,7 +27,6 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
     }
 
     func show() {
-        NSLog("ReLaunchpad: show()")
         hideWorkItem?.cancel()
         hideWorkItem = nil
 
@@ -90,7 +89,6 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
     // MARK: - NSWindowDelegate
 
     func windowDidResignKey(_ notification: Notification) {
-        NSLog("ReLaunchpad: windowDidResignKey -> hide")
         hide()
     }
 

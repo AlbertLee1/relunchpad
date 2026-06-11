@@ -9,6 +9,10 @@ struct ReLaunchpadApp: App {
             Button("打开 Launchpad") {
                 OverlayWindowController.shared.toggle()
             }
+            Button("设置…") {
+                SettingsWindowController.shared.show()
+            }
+            .keyboardShortcut(",")
             Divider()
             Button("退出 ReLaunchpad") {
                 NSApp.terminate(nil)

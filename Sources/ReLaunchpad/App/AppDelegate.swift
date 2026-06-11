@@ -26,6 +26,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+        if args.contains("--settings") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                SettingsWindowController.shared.show()
+            }
+        }
     }
 
     /// Exercises the drag state machine without synthetic mouse events:

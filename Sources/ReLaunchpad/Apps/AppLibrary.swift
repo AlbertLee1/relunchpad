@@ -13,9 +13,18 @@ final class AppLibrary: ObservableObject {
     private let store = LayoutStore()
 
     func start() {
+        grid = GridConfig(columns: Preferences.gridColumns, rows: Preferences.gridRows)
         if let saved = store.load() { layout = saved }
         scanner.onUpdate = { [weak self] apps in self?.apply(apps) }
         scanner.start()
+    }
+
+    /// Re-chunks the layout when the grid dimensions change in settings.
+    func applyGridPreferences() {
+        let newGrid = GridConfig(columns: Preferences.gridColumns, rows: Preferences.gridRows)
+        guard newGrid != grid else { return }
+        grid = newGrid
+        updateLayout(Layout(pages: Layout.normalized(layout.pages, slotsPerPage: newGrid.slotsPerPage)))
     }
 
     func app(for id: String) -> AppItem? { appsByID[id] }

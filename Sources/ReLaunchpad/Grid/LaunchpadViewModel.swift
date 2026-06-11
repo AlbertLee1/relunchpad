@@ -88,8 +88,12 @@ final class LaunchpadViewModel: ObservableObject {
         }
 
         switch event.keyCode {
-        case 123: goToPage(currentPage - 1); return true // ←
-        case 124: goToPage(currentPage + 1); return true // →
+        case 123: // ←  (⌘← jumps to the first page)
+            goToPage(event.modifierFlags.contains(.command) ? 0 : currentPage - 1)
+            return true
+        case 124: // →  (⌘→ jumps to the last page)
+            goToPage(event.modifierFlags.contains(.command) ? pageCount - 1 : currentPage + 1)
+            return true
         default: return false
         }
     }

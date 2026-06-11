@@ -26,7 +26,7 @@ struct LaunchpadRootView: View {
                     pager
                         .padding(.top, 24)
                     pageDots
-                        .padding(.bottom, 28)
+                        .padding(.bottom, 28 + state.bottomInset)
                 }
                 .scaleEffect(state.isPresented ? 1.0 : 1.15)
                 .opacity(state.isPresented ? 1 : 0)

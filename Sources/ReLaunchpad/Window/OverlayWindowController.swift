@@ -8,6 +8,9 @@ final class OverlayState: ObservableObject {
     @Published var isPresented = false
     /// Pre-blurred wallpaper of the screen the overlay is showing on.
     @Published var wallpaper: NSImage?
+    /// Height of the Dock at the bottom of the current screen — content keeps
+    /// clear of it since the Dock floats above the overlay.
+    @Published var bottomInset: CGFloat = 0
 }
 
 @MainActor
@@ -37,8 +40,10 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
         let screen = screenUnderMouse()
         window.setFrame(screen.frame, display: true)
         state.wallpaper = WallpaperCache.shared.blurredWallpaper(for: screen)
+        state.bottomInset = max(0, screen.visibleFrame.minY - screen.frame.minY)
 
         state.isPresented = false
+        NSApp.presentationOptions = [.autoHideMenuBar]
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
 
@@ -79,6 +84,7 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
 
     func hide() {
         guard let window, window.isVisible, hideWorkItem == nil else { return }
+        NSApp.presentationOptions = []
         withAnimation(.easeIn(duration: Self.animationDuration)) {
             state.isPresented = false
         }
@@ -119,7 +125,10 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) + 1)
+        // Just below the Dock: the original Launchpad keeps the Dock visible
+        // and clickable on top of the grid (the menu bar is hidden via
+        // presentationOptions while the overlay is up).
+        window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.dockWindow)) - 1)
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         window.isOpaque = false
         window.backgroundColor = .clear

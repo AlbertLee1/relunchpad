@@ -142,7 +142,10 @@ struct LaunchpadRootView: View {
                 .ignoresSafeArea()
                 .onTapGesture { handleBackgroundTap() }
             FolderOpenView(folder: folder)
-                .transition(.scale(scale: 0.8).combined(with: .opacity))
+                .transition(
+                    .scale(scale: 0.1, anchor: viewModel.openFolderAnchor)
+                        .combined(with: .opacity)
+                )
         }
     }
 

@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -23,6 +24,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
                 if args.contains("--demo-drag") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { Self.runDragDemo() }
+                }
+                if args.contains("--open-folder") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                        for slot in AppLibrary.shared.layout.pages.joined() {
+                            if case .folder(let folder) = slot {
+                                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                                    LaunchpadViewModel.shared.openFolder = folder.id
+                                }
+                                break
+                            }
+                        }
+                    }
                 }
                 if args.contains("--jiggle") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1) {

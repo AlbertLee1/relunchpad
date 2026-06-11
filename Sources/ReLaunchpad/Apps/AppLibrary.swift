@@ -97,8 +97,18 @@ final class AppLibrary: ObservableObject {
 
     private func apply(_ apps: [AppItem]) {
         appsByID = Dictionary(apps.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        // Fresh layout: Apple's built-in apps lead (original Launchpad put
+        // them on page one); afterwards new apps simply append by name.
+        let freshInstall = layout.referencedIDs.isEmpty
         let sortedIDs = apps
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            .sorted {
+                if freshInstall {
+                    let lhsSystem = $0.url.path.hasPrefix("/System")
+                    let rhsSystem = $1.url.path.hasPrefix("/System")
+                    if lhsSystem != rhsSystem { return lhsSystem }
+                }
+                return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+            }
             .map(\.id)
         let reconciled = Layout.reconciled(layout, installed: sortedIDs, slotsPerPage: grid.slotsPerPage)
         if reconciled != layout {

@@ -19,6 +19,9 @@ final class LaunchpadViewModel: ObservableObject {
     @Published var selectedIndex: Int?
     /// Folder currently expanded over the grid.
     @Published var openFolder: UUID?
+    /// Where the open folder's icon sits, as a fraction of the root bounds —
+    /// the expand animation grows the panel out of this point.
+    @Published var openFolderAnchor: UnitPoint = .center
     /// Jiggle (edit) mode: icons wobble and removable apps show a ✕ badge.
     @Published var isJiggling = false
 

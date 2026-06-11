@@ -29,18 +29,28 @@ struct PageGridView: View {
                     let isSource = source?.page == pageIndex && source?.slot == index
                     let cell = displayCell(forModelIndex: index, source: source)
                     let hovered = isHovered(modelIndex: index, source: source)
+                    let center = CGPoint(
+                        x: (CGFloat(cell % grid.columns) + 0.5) * cellWidth,
+                        y: (CGFloat(cell / grid.columns) + 0.5) * cellHeight
+                    )
 
-                    slotView(slot, iconSide: iconSide, isSelected: index == selectedIndex, hovered: hovered)
-                        .frame(width: cellWidth, height: cellHeight)
-                        .position(
-                            x: (CGFloat(cell % grid.columns) + 0.5) * cellWidth,
-                            y: (CGFloat(cell / grid.columns) + 0.5) * cellHeight
+                    slotView(
+                        slot,
+                        iconSide: iconSide,
+                        isSelected: index == selectedIndex,
+                        hovered: hovered,
+                        cellCenter: CGPoint(
+                            x: geo.frame(in: .named("launchpad")).minX + center.x,
+                            y: geo.frame(in: .named("launchpad")).minY + center.y
                         )
-                        .opacity(isSource ? 0 : 1)
-                        .animation(
-                            isSource ? nil : .spring(response: 0.3, dampingFraction: 0.8),
-                            value: cell
-                        )
+                    )
+                    .frame(width: cellWidth, height: cellHeight)
+                    .position(center)
+                    .opacity(isSource ? 0 : 1)
+                    .animation(
+                        isSource ? nil : .spring(response: 0.3, dampingFraction: 0.8),
+                        value: cell
+                    )
                 }
             }
             .onChange(of: geo.frame(in: .named("launchpad")), initial: true) { _, frame in
@@ -79,7 +89,13 @@ struct PageGridView: View {
     }
 
     @ViewBuilder
-    private func slotView(_ slot: Slot, iconSide: CGFloat, isSelected: Bool, hovered: Bool) -> some View {
+    private func slotView(
+        _ slot: Slot,
+        iconSide: CGFloat,
+        isSelected: Bool,
+        hovered: Bool,
+        cellCenter: CGPoint
+    ) -> some View {
         switch slot {
         case .app(let bundleID):
             if let app = library.app(for: bundleID) {
@@ -100,7 +116,14 @@ struct PageGridView: View {
             let view = FolderIconView(folder: folder, iconSide: iconSide, isHovered: hovered)
                 .jiggle(viewModel.isJiggling && isInteractive, seed: folder.id.uuidString)
                 .onTapGesture {
-                    withAnimation(.easeOut(duration: 0.18)) {
+                    let bounds = drag.rootBounds
+                    if bounds.width > 0 {
+                        viewModel.openFolderAnchor = UnitPoint(
+                            x: cellCenter.x / bounds.width,
+                            y: cellCenter.y / bounds.height
+                        )
+                    }
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
                         LaunchpadViewModel.shared.openFolder = folder.id
                     }
                 }

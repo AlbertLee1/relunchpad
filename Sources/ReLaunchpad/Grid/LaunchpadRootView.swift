@@ -96,6 +96,9 @@ struct LaunchpadRootView: View {
             }
             .offset(x: -CGFloat(min(viewModel.currentPage, pages.count - 1)) * pageWidth)
             .contentShape(Rectangle())
+            // Clicks on empty space dismiss, like the original Launchpad.
+            // Icon taps win automatically — child gestures take precedence.
+            .onTapGesture { handleBackgroundTap() }
             .gesture(
                 DragGesture(minimumDistance: 20)
                     .onEnded { value in

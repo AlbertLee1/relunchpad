@@ -35,6 +35,12 @@ enum Preferences {
         set { defaults.set(max(4, min(5, newValue)), forKey: "pinchFingers") }
     }
 
+    /// Capture the hardware Launchpad key (F4). Needs Accessibility.
+    static var captureLaunchpadKey: Bool {
+        get { defaults.object(forKey: "captureLaunchpadKey") as? Bool ?? false }
+        set { defaults.set(newValue, forKey: "captureLaunchpadKey") }
+    }
+
     static var showDockIcon: Bool {
         get { defaults.object(forKey: "showDockIcon") as? Bool ?? true }
         set { defaults.set(newValue, forKey: "showDockIcon") }

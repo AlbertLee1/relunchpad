@@ -202,3 +202,34 @@ import Testing
         #expect(detector.process(points: ring(0.15), at: 1.3) == .pinch) // re-armed
     }
 }
+
+@Suite struct PinyinSearchTests {
+    let apps = [
+        AppItem(id: "1", name: "微信", url: URL(fileURLWithPath: "/a")),
+        AppItem(id: "2", name: "网易云音乐", url: URL(fileURLWithPath: "/b")),
+        AppItem(id: "3", name: "Safari", url: URL(fileURLWithPath: "/c")),
+        AppItem(id: "4", name: "微博", url: URL(fileURLWithPath: "/d")),
+    ]
+
+    @Test func fullPinyinMatches() {
+        #expect(SearchRanker.filter(apps, query: "weixin").map(\.name) == ["微信"])
+    }
+
+    @Test func pinyinInitialsMatch() {
+        let names = SearchRanker.filter(apps, query: "wx").map(\.name)
+        #expect(names.contains("微信"))
+    }
+
+    @Test func pinyinPrefixMatchesMultiple() {
+        let names = SearchRanker.filter(apps, query: "wei").map(\.name)
+        #expect(Set(names) == ["微信", "微博"])
+    }
+
+    @Test func chineseQueryStillMatchesDirectly() {
+        #expect(SearchRanker.filter(apps, query: "网易").map(\.name) == ["网易云音乐"])
+    }
+
+    @Test func latinNamesUnaffected() {
+        #expect(SearchRanker.filter(apps, query: "saf").map(\.name) == ["Safari"])
+    }
+}

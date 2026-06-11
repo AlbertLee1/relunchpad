@@ -4,7 +4,9 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject private var coordinator = TriggerCoordinator.shared
     @ObservedObject private var pinchMonitor = TriggerCoordinator.shared.pinch
+    @ObservedObject private var mediaKey = TriggerCoordinator.shared.mediaKey
 
+    @State private var captureLaunchpadKey = Preferences.captureLaunchpadKey
     @State private var hotCorner = Preferences.hotCorner
     @State private var pinchEnabled = Preferences.pinchEnabled
     @State private var pinchFingers = Preferences.pinchFingers
@@ -17,6 +19,20 @@ struct SettingsView: View {
         Form {
             Section("唤起方式") {
                 KeyboardShortcuts.Recorder("全局快捷键", name: .toggleLaunchpad)
+
+                Toggle("占用 F4 启动台键", isOn: $captureLaunchpadKey)
+                    .onChange(of: captureLaunchpadKey) { _, value in
+                        Preferences.captureLaunchpadKey = value
+                        if value, !PermissionChecker.accessibilityGranted {
+                            PermissionChecker.openAccessibilitySettings()
+                        }
+                        coordinator.applyPreferences()
+                    }
+                if captureLaunchpadKey, !mediaKey.isActive {
+                    Label("需要「辅助功能」权限,授权后请重启应用", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .font(.callout)
+                }
 
                 Picker("触发角", selection: $hotCorner) {
                     ForEach(HotCorner.allCases) { corner in

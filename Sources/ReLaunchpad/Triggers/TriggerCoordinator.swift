@@ -8,6 +8,7 @@ final class TriggerCoordinator: ObservableObject {
 
     let pinch = PinchGestureMonitor()
     let hotCorner = HotCornerMonitor()
+    let mediaKey = MediaKeyTap()
 
     private var lastAction = Date.distantPast
     private let debounce: TimeInterval = 0.35
@@ -23,6 +24,11 @@ final class TriggerCoordinator: ObservableObject {
             pinch.start(fingers: Preferences.pinchFingers)
         } else {
             pinch.stop()
+        }
+        if Preferences.captureLaunchpadKey {
+            mediaKey.start()
+        } else {
+            mediaKey.stop()
         }
         NSApp.setActivationPolicy(Preferences.showDockIcon ? .regular : .accessory)
     }

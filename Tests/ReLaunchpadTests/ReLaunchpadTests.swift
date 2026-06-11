@@ -154,3 +154,51 @@ import Testing
         #expect(result == [[.app(bundleID: "a")]])
     }
 }
+
+@Suite struct PinchDetectorTests {
+    /// Five fingers arranged on a circle of the given radius.
+    func ring(_ radius: Double) -> [(x: Double, y: Double)] {
+        (0..<5).map { i in
+            let a = Double(i) / 5 * 2 * .pi
+            return (x: 0.5 + radius * cos(a), y: 0.5 + radius * sin(a))
+        }
+    }
+
+    @Test func contractionFiresPinch() {
+        var detector = PinchDetector(requiredFingers: 5)
+        #expect(detector.process(points: ring(0.30), at: 0.00) == nil)
+        #expect(detector.process(points: ring(0.25), at: 0.08) == nil)
+        #expect(detector.process(points: ring(0.15), at: 0.16) == .pinch)
+    }
+
+    @Test func expansionFiresSpread() {
+        var detector = PinchDetector(requiredFingers: 5)
+        #expect(detector.process(points: ring(0.15), at: 0.00) == nil)
+        #expect(detector.process(points: ring(0.25), at: 0.12) == .spread)
+    }
+
+    @Test func slowContractionOutsideWindowDoesNotFire() {
+        var detector = PinchDetector(requiredFingers: 5)
+        #expect(detector.process(points: ring(0.30), at: 0.0) == nil)
+        #expect(detector.process(points: ring(0.27), at: 0.4) == nil)
+        #expect(detector.process(points: ring(0.24), at: 0.8) == nil)
+        #expect(detector.process(points: ring(0.21), at: 1.2) == nil)
+    }
+
+    @Test func fourFingersDoNotTriggerFiveFingerDetector() {
+        var detector = PinchDetector(requiredFingers: 5)
+        let four = Array(ring(0.3).prefix(4))
+        #expect(detector.process(points: four, at: 0.0) == nil)
+        #expect(detector.process(points: Array(ring(0.1).prefix(4)), at: 0.1) == nil)
+    }
+
+    @Test func cooldownSuppressesImmediateRetrigger() {
+        var detector = PinchDetector(requiredFingers: 5)
+        _ = detector.process(points: ring(0.30), at: 0.0)
+        #expect(detector.process(points: ring(0.15), at: 0.1) == .pinch)
+        _ = detector.process(points: ring(0.30), at: 0.2)
+        #expect(detector.process(points: ring(0.15), at: 0.3) == nil) // within cooldown
+        _ = detector.process(points: ring(0.30), at: 1.2)
+        #expect(detector.process(points: ring(0.15), at: 1.3) == .pinch) // re-armed
+    }
+}

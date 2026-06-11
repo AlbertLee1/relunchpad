@@ -34,9 +34,11 @@ if [ -f Resources/AppIcon.icns ]; then
     /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$APP/Contents/Info.plist" 2>/dev/null || true
 fi
 
+# No hardened runtime: its library validation rejects frameworks signed by a
+# self-signed identity (no Team ID), and we don't notarize local builds.
 if security find-identity -v -p codesigning | grep -q "$SIGN_IDENTITY"; then
-    codesign --force --options runtime --sign "$SIGN_IDENTITY" "$APP/Contents/Frameworks/OpenMultitouchSupportXCF.framework"
-    codesign --force --options runtime --sign "$SIGN_IDENTITY" "$APP"
+    codesign --force --sign "$SIGN_IDENTITY" "$APP/Contents/Frameworks/OpenMultitouchSupportXCF.framework"
+    codesign --force --sign "$SIGN_IDENTITY" "$APP"
     echo "Signed with: $SIGN_IDENTITY"
 else
     codesign --force --sign - "$APP/Contents/Frameworks/OpenMultitouchSupportXCF.framework"

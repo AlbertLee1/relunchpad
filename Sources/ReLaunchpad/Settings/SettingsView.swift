@@ -14,6 +14,7 @@ struct SettingsView: View {
     @State private var gridColumns = Preferences.gridColumns
     @State private var gridRows = Preferences.gridRows
     @State private var launchAtLogin = LoginItem.isEnabled
+    @State private var loginNeedsApproval = LoginItem.requiresApproval
     @State private var showResetConfirm = false
 
     var body: some View {
@@ -30,9 +31,18 @@ struct SettingsView: View {
                         coordinator.applyPreferences()
                     }
                 if captureLaunchpadKey, !mediaKey.isActive {
-                    Label("需要「辅助功能」权限,授权后请重启应用", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                        .font(.callout)
+                    HStack {
+                        Label("需要「辅助功能」权限", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Spacer()
+                        Button("去授权") {
+                            PermissionChecker.openAccessibilitySettings()
+                        }
+                        Button("已授权,重试启用") {
+                            coordinator.applyPreferences()
+                        }
+                    }
+                    .font(.callout)
                 }
 
                 Picker("触发角", selection: $hotCorner) {
@@ -93,7 +103,19 @@ struct SettingsView: View {
                     .onChange(of: launchAtLogin) { _, value in
                         LoginItem.set(value)
                         launchAtLogin = LoginItem.isEnabled
+                        loginNeedsApproval = LoginItem.requiresApproval
                     }
+                if loginNeedsApproval {
+                    HStack {
+                        Label("等待系统批准:请在「登录项」设置中允许 ReLaunchpad", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Spacer()
+                        Button("打开登录项设置") {
+                            LoginItem.openSystemSettings()
+                        }
+                    }
+                    .font(.callout)
+                }
                 LabeledContent("图标排列") {
                     Button("重置布局…") { showResetConfirm = true }
                 }
@@ -129,8 +151,11 @@ struct SettingsView: View {
                 Label("缺少「输入监控」权限", systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                 Spacer()
-                Button("打开系统设置") {
+                Button("去授权") {
                     PermissionChecker.openInputMonitoringSettings()
+                }
+                Button("已授权,重启应用") {
+                    PermissionChecker.relaunchApp()
                 }
             case .off:
                 Label("已关闭", systemImage: "circle.slash")

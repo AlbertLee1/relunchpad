@@ -29,4 +29,15 @@ enum PermissionChecker {
             NSWorkspace.shared.open(url)
         }
     }
+
+    /// Input Monitoring grants only apply to freshly launched processes —
+    /// offer this right next to the authorize button.
+    static func relaunchApp() {
+        let path = Bundle.main.bundlePath
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = ["-c", "sleep 0.5; open \"\(path)\""]
+        try? task.run()
+        NSApp.terminate(nil)
+    }
 }

@@ -53,8 +53,14 @@ struct WelcomeView: View {
                     }
                     Spacer()
                     if pinchMonitor.status != .active {
-                        Button("去授权") {
-                            PermissionChecker.openInputMonitoringSettings()
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Button("去授权") {
+                                PermissionChecker.openInputMonitoringSettings()
+                            }
+                            Button("已授权,重启应用") {
+                                PermissionChecker.relaunchApp()
+                            }
+                            .controlSize(.small)
                         }
                     }
                 }

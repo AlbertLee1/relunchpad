@@ -4,6 +4,8 @@ struct AppIconView: View {
     let app: AppItem
     let iconSide: CGFloat
     var isSelected = false
+    var isHovered = false
+    var showsLabel = true
 
     @State private var isPressed = false
 
@@ -13,12 +15,16 @@ struct AppIconView: View {
                 .resizable()
                 .interpolation(.high)
                 .frame(width: iconSide, height: iconSide)
-            Text(app.name)
-                .font(.system(size: 13))
-                .foregroundStyle(.white)
-                .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
-                .lineLimit(1)
-                .truncationMode(.tail)
+                .scaleEffect(isHovered ? 1.18 : 1.0)
+                .animation(.easeOut(duration: 0.12), value: isHovered)
+            if showsLabel {
+                Text(app.name)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         }
         .padding(8)
         .background(

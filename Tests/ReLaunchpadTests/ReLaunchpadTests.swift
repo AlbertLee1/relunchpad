@@ -92,3 +92,65 @@ import Testing
         #expect(pages[2] == [.app(bundleID: "4")])
     }
 }
+
+@Suite struct GridMathTests {
+    let grid = GridConfig(columns: 4, rows: 2)
+    let frame = CGRect(x: 100, y: 100, width: 400, height: 200)
+
+    @Test func centerOfSlotZero() {
+        let c = GridMath.slotCenter(index: 0, in: frame, grid: grid)
+        #expect(c == CGPoint(x: 150, y: 150))
+    }
+
+    @Test func pointOnIconCenterIsFolderTarget() {
+        let target = GridMath.dropTarget(at: CGPoint(x: 150, y: 150), in: frame, grid: grid, count: 8)
+        #expect(target == .onIcon(0))
+    }
+
+    @Test func pointBetweenCellsInserts() {
+        // Right edge of cell 0 → insert at 1.
+        let target = GridMath.dropTarget(at: CGPoint(x: 195, y: 150), in: frame, grid: grid, count: 8)
+        #expect(target == .insert(1))
+    }
+
+    @Test func leftHalfInsertsBefore() {
+        let target = GridMath.dropTarget(at: CGPoint(x: 210, y: 150), in: frame, grid: grid, count: 8)
+        #expect(target == .insert(1))
+    }
+
+    @Test func emptyCellInsertsAtCount() {
+        // Cell 5 unoccupied when count == 3 → clamp to insert(3).
+        let target = GridMath.dropTarget(at: CGPoint(x: 250, y: 250), in: frame, grid: grid, count: 3)
+        #expect(target == .insert(3))
+    }
+
+    @Test func outsideFrameIsNil() {
+        #expect(GridMath.dropTarget(at: CGPoint(x: 50, y: 50), in: frame, grid: grid, count: 8) == nil)
+    }
+}
+
+@Suite struct LayoutNormalizeTests {
+    @Test func overflowCascadesToNextPage() {
+        let pages: [[Slot]] = [
+            [.app(bundleID: "a"), .app(bundleID: "b"), .app(bundleID: "c")],
+            [.app(bundleID: "d")],
+        ]
+        let result = Layout.normalized(pages, slotsPerPage: 2)
+        #expect(result == [
+            [.app(bundleID: "a"), .app(bundleID: "b")],
+            [.app(bundleID: "c"), .app(bundleID: "d")],
+        ])
+    }
+
+    @Test func deepOverflowCreatesPages() {
+        let pages: [[Slot]] = [(0..<5).map { .app(bundleID: "\($0)") }]
+        let result = Layout.normalized(pages, slotsPerPage: 2)
+        #expect(result.count == 3)
+        #expect(result[2] == [.app(bundleID: "4")])
+    }
+
+    @Test func trailingEmptyPagesTrimmed() {
+        let result = Layout.normalized([[.app(bundleID: "a")], [], []], slotsPerPage: 4)
+        #expect(result == [[.app(bundleID: "a")]])
+    }
+}

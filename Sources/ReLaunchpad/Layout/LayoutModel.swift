@@ -70,4 +70,30 @@ struct Layout: Codable, Equatable, Sendable {
         if pages.isEmpty { pages = [[]] }
         return Layout(pages: pages)
     }
+
+    /// Restores the page-size invariant after a drag edit: pages overflowing
+    /// `slotsPerPage` cascade their tail into the next page (original
+    /// Launchpad behavior), empty trailing pages are trimmed.
+    static func normalized(_ pages: [[Slot]], slotsPerPage: Int) -> [[Slot]] {
+        var result: [[Slot]] = []
+        var carry: [Slot] = []
+        for page in pages {
+            var merged = carry + page
+            carry = []
+            if merged.count > slotsPerPage {
+                carry = Array(merged[slotsPerPage...])
+                merged = Array(merged[..<slotsPerPage])
+            }
+            result.append(merged)
+        }
+        while !carry.isEmpty {
+            let chunk = Array(carry.prefix(slotsPerPage))
+            carry.removeFirst(chunk.count)
+            result.append(chunk)
+        }
+        while result.count > 1, result.last?.isEmpty == true {
+            result.removeLast()
+        }
+        return result.isEmpty ? [[]] : result
+    }
 }

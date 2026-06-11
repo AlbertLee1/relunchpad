@@ -17,6 +17,8 @@ final class LaunchpadViewModel: ObservableObject {
     }
     /// Keyboard selection within search results (global index across pages).
     @Published var selectedIndex: Int?
+    /// Folder currently expanded over the grid.
+    @Published var openFolder: UUID?
 
     var isSearching: Bool { !searchText.isEmpty }
 
@@ -39,6 +41,7 @@ final class LaunchpadViewModel: ObservableObject {
         currentPage = 0
         searchText = ""
         selectedIndex = nil
+        openFolder = nil
         scrollAccumulator = 0
         scrollLocked = false
     }
@@ -53,7 +56,15 @@ final class LaunchpadViewModel: ObservableObject {
 
     /// Returns true when the event was consumed.
     func handleKey(_ event: NSEvent) -> Bool {
-        if event.keyCode == 53 { // Esc: clear search first, then dismiss
+        if event.keyCode == 53 { // Esc: drag > folder > search > dismiss
+            if DragController.shared.isDragging {
+                DragController.shared.cancel()
+                return true
+            }
+            if openFolder != nil {
+                withAnimation(.easeOut(duration: 0.18)) { openFolder = nil }
+                return true
+            }
             if isSearching {
                 searchText = ""
                 return true

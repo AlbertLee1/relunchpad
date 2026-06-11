@@ -31,6 +31,53 @@ final class AppLibrary: ObservableObject {
         store.save(newLayout)
     }
 
+    // MARK: - Folder mutations
+
+    func folder(_ id: UUID) -> FolderSlot? {
+        for slot in layout.pages.joined() {
+            if case .folder(let folder) = slot, folder.id == id { return folder }
+        }
+        return nil
+    }
+
+    /// Applies `transform` to the folder, dissolving it when it shrinks to a
+    /// single item (original Launchpad behavior) and dropping it when empty.
+    func mutateFolder(_ id: UUID, transform: (inout FolderSlot) -> Void) {
+        var pages = layout.pages
+        for pageIndex in pages.indices {
+            for slotIndex in pages[pageIndex].indices {
+                guard case .folder(var folder) = pages[pageIndex][slotIndex], folder.id == id else { continue }
+                transform(&folder)
+                if folder.items.isEmpty {
+                    pages[pageIndex].remove(at: slotIndex)
+                } else if folder.items.count == 1 {
+                    pages[pageIndex][slotIndex] = .app(bundleID: folder.items[0])
+                    LaunchpadViewModel.shared.openFolder = nil
+                } else {
+                    pages[pageIndex][slotIndex] = .folder(folder)
+                }
+                updateLayout(Layout(pages: Layout.normalized(pages, slotsPerPage: grid.slotsPerPage)))
+                return
+            }
+        }
+    }
+
+    func renameFolder(_ id: UUID, to name: String) {
+        mutateFolder(id) { $0.name = name }
+    }
+
+    func removeFromFolder(_ id: UUID, bundleID: String) {
+        mutateFolder(id) { $0.items.removeAll { $0 == bundleID } }
+    }
+
+    func moveInFolder(_ id: UUID, from: Int, to: Int) {
+        mutateFolder(id) { folder in
+            guard folder.items.indices.contains(from) else { return }
+            let item = folder.items.remove(at: from)
+            folder.items.insert(item, at: min(to, folder.items.count))
+        }
+    }
+
     private func apply(_ apps: [AppItem]) {
         appsByID = Dictionary(apps.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let sortedIDs = apps

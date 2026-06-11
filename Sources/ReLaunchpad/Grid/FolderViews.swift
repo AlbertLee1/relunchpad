@@ -54,6 +54,7 @@ struct FolderOpenView: View {
 
     @ObservedObject private var library = AppLibrary.shared
     @ObservedObject private var drag = DragController.shared
+    @ObservedObject private var viewModel = LaunchpadViewModel.shared
     @FocusState private var nameFocused: Bool
     @State private var editedName = ""
 
@@ -105,7 +106,7 @@ struct FolderOpenView: View {
                 if let app = library.app(for: bundleID) {
                     let isDragged = index == draggedIndex
                     let cellIndex = displayCell(for: index, draggedIndex: draggedIndex)
-                    AppIconView(app: app, iconSide: 72)
+                    AppIconView(app: app, iconSide: 72, isJiggling: viewModel.isJiggling)
                         .slotDrag(.app(bundleID: bundleID)) {
                             .folder(id: folder.id, itemIndex: indexOf(bundleID) ?? index)
                         }

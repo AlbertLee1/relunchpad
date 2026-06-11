@@ -19,6 +19,8 @@ final class LaunchpadViewModel: ObservableObject {
     @Published var selectedIndex: Int?
     /// Folder currently expanded over the grid.
     @Published var openFolder: UUID?
+    /// Jiggle (edit) mode: icons wobble and removable apps show a ✕ badge.
+    @Published var isJiggling = false
 
     var isSearching: Bool { !searchText.isEmpty }
 
@@ -42,6 +44,7 @@ final class LaunchpadViewModel: ObservableObject {
         searchText = ""
         selectedIndex = nil
         openFolder = nil
+        isJiggling = false
         scrollAccumulator = 0
         scrollLocked = false
     }
@@ -56,13 +59,17 @@ final class LaunchpadViewModel: ObservableObject {
 
     /// Returns true when the event was consumed.
     func handleKey(_ event: NSEvent) -> Bool {
-        if event.keyCode == 53 { // Esc: drag > folder > search > dismiss
+        if event.keyCode == 53 { // Esc: drag > folder > jiggle > search > dismiss
             if DragController.shared.isDragging {
                 DragController.shared.cancel()
                 return true
             }
             if openFolder != nil {
                 withAnimation(.easeOut(duration: 0.18)) { openFolder = nil }
+                return true
+            }
+            if isJiggling {
+                isJiggling = false
                 return true
             }
             if isSearching {

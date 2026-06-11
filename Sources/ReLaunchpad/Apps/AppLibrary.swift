@@ -40,6 +40,14 @@ final class AppLibrary: ObservableObject {
         store.save(newLayout)
     }
 
+    /// Removes a (just-trashed) app from the model and layout immediately,
+    /// without waiting for the Spotlight update.
+    func removeEverywhere(bundleID: String) {
+        appsByID[bundleID] = nil
+        let installed = layout.referencedIDs.subtracting([bundleID])
+        updateLayout(Layout.reconciled(layout, installed: Array(installed), slotsPerPage: grid.slotsPerPage))
+    }
+
     // MARK: - Folder mutations
 
     func folder(_ id: UUID) -> FolderSlot? {

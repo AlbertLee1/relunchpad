@@ -24,6 +24,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if args.contains("--demo-drag") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { Self.runDragDemo() }
                 }
+                if args.contains("--jiggle") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        LaunchpadViewModel.shared.isJiggling = true
+                    }
+                }
             }
         }
         if args.contains("--settings") {

@@ -83,7 +83,13 @@ struct PageGridView: View {
         switch slot {
         case .app(let bundleID):
             if let app = library.app(for: bundleID) {
-                let icon = AppIconView(app: app, iconSide: iconSide, isSelected: isSelected, isHovered: hovered)
+                let icon = AppIconView(
+                    app: app,
+                    iconSide: iconSide,
+                    isSelected: isSelected,
+                    isHovered: hovered,
+                    isJiggling: viewModel.isJiggling && isInteractive
+                )
                 if isInteractive {
                     icon.slotDrag(slot) { currentOrigin(of: slot) }
                 } else {
@@ -92,6 +98,7 @@ struct PageGridView: View {
             }
         case .folder(let folder):
             let view = FolderIconView(folder: folder, iconSide: iconSide, isHovered: hovered)
+                .jiggle(viewModel.isJiggling && isInteractive, seed: folder.id.uuidString)
                 .onTapGesture {
                     withAnimation(.easeOut(duration: 0.18)) {
                         LaunchpadViewModel.shared.openFolder = folder.id

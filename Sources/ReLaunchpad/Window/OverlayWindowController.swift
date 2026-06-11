@@ -6,6 +6,8 @@ import SwiftUI
 @MainActor
 final class OverlayState: ObservableObject {
     @Published var isPresented = false
+    /// Pre-blurred wallpaper of the screen the overlay is showing on.
+    @Published var wallpaper: NSImage?
 }
 
 @MainActor
@@ -17,6 +19,7 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
     private var hideWorkItem: DispatchWorkItem?
     private var scrollMonitor: Any?
     private var keyMonitor: Any?
+    private var flagsMonitor: Any?
 
     static let animationDuration: TimeInterval = 0.18
 
@@ -33,6 +36,7 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
         let window = ensureWindow()
         let screen = screenUnderMouse()
         window.setFrame(screen.frame, display: true)
+        state.wallpaper = WallpaperCache.shared.blurredWallpaper(for: screen)
 
         state.isPresented = false
         NSApp.activate(ignoringOtherApps: true)
@@ -56,6 +60,14 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
                 return LaunchpadViewModel.shared.handleKey(event) ? nil : event
             }
         }
+        // Holding ⌥ enters jiggle mode, releasing it leaves — like the original.
+        if flagsMonitor == nil {
+            flagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { event in
+                guard event.window === self.window else { return event }
+                LaunchpadViewModel.shared.isJiggling = event.modifierFlags.contains(.option)
+                return event
+            }
+        }
 
         // Flip on the next runloop tick so SwiftUI animates from the closed state.
         DispatchQueue.main.async { [self] in
@@ -77,6 +89,10 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
         if let keyMonitor {
             NSEvent.removeMonitor(keyMonitor)
             self.keyMonitor = nil
+        }
+        if let flagsMonitor {
+            NSEvent.removeMonitor(flagsMonitor)
+            self.flagsMonitor = nil
         }
         let item = DispatchWorkItem { [weak self] in
             self?.window?.orderOut(nil)

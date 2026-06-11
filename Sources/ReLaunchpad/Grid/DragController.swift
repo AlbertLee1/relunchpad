@@ -70,6 +70,8 @@ final class DragController: ObservableObject {
 
     func begin(item: Slot, origin: DragOrigin, location: CGPoint) {
         guard session == nil, !LaunchpadViewModel.shared.isSearching else { return }
+        // Click-and-hold enters jiggle mode, like the original.
+        LaunchpadViewModel.shared.isJiggling = true
         session = DragSession(item: item, origin: origin, location: location)
         switch origin {
         case .page(let pageIndex, let slotIndex):
@@ -265,8 +267,9 @@ final class DragController: ObservableObject {
            case .app(let draggedID) = item {
             switch pages[page][hoverOrdinal] {
             case .app(let targetID):
+                let urls = [targetID, draggedID].compactMap { AppLibrary.shared.app(for: $0)?.url }
                 pages[page][hoverOrdinal] = .folder(
-                    FolderSlot(id: UUID(), name: defaultFolderName, items: [targetID, draggedID])
+                    FolderSlot(id: UUID(), name: FolderNamer.suggestedName(forAppsAt: urls), items: [targetID, draggedID])
                 )
             case .folder(var folder):
                 folder.items.append(draggedID)
@@ -314,8 +317,6 @@ final class DragController: ObservableObject {
     }
 
     // MARK: - Helpers
-
-    private var defaultFolderName: String { "未命名文件夹" }
 
     func folderGrid(forCount count: Int) -> GridConfig {
         let columns = min(5, max(2, Int(ceil(sqrt(Double(max(count, 1)))))))

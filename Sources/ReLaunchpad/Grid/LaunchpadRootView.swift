@@ -14,7 +14,7 @@ struct LaunchpadRootView: View {
     var body: some View {
         GeometryReader { rootGeo in
             ZStack {
-                BlurBackgroundView()
+                background
                     .ignoresSafeArea()
                     .opacity(state.isPresented ? 1 : 0)
                     .contentShape(Rectangle())
@@ -47,12 +47,32 @@ struct LaunchpadRootView: View {
     private func handleBackgroundTap() {
         if viewModel.openFolder != nil {
             withAnimation(.easeOut(duration: 0.18)) { viewModel.openFolder = nil }
+        } else if viewModel.isJiggling {
+            viewModel.isJiggling = false
         } else {
             onDismiss()
         }
     }
 
     // MARK: - Pieces
+
+    /// Blurred wallpaper like the original Launchpad; falls back to a
+    /// behind-window material when the wallpaper can't be read.
+    @ViewBuilder
+    private var background: some View {
+        if let wallpaper = state.wallpaper {
+            GeometryReader { geo in
+                Image(nsImage: wallpaper)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+                    .overlay(Color.black.opacity(0.32))
+            }
+        } else {
+            BlurBackgroundView()
+        }
+    }
 
     private var searchBar: some View {
         HStack(spacing: 5) {

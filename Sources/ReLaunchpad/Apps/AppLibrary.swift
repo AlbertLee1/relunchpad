@@ -90,6 +90,16 @@ final class AppLibrary: ObservableObject {
         mutateFolder(id) { $0.name = name }
     }
 
+    /// Spills the folder's apps back onto its page (folder disappears).
+    func dissolveFolder(_ id: UUID) {
+        if LaunchpadViewModel.shared.openFolder == id {
+            LaunchpadViewModel.shared.openFolder = nil
+        }
+        let dissolved = layout.dissolvingFolder(id)
+        guard dissolved != layout else { return }
+        updateLayout(Layout(pages: Layout.normalized(dissolved.pages, slotsPerPage: grid.slotsPerPage)))
+    }
+
     func removeFromFolder(_ id: UUID, bundleID: String) {
         mutateFolder(id) { $0.items.removeAll { $0 == bundleID } }
     }

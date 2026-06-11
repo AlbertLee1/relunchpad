@@ -113,18 +113,28 @@ struct PageGridView: View {
                 }
             }
         case .folder(let folder):
+            let open = {
+                let bounds = drag.rootBounds
+                if bounds.width > 0 {
+                    viewModel.openFolderAnchor = UnitPoint(
+                        x: cellCenter.x / bounds.width,
+                        y: cellCenter.y / bounds.height
+                    )
+                }
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                    LaunchpadViewModel.shared.openFolder = folder.id
+                }
+            }
             let view = FolderIconView(folder: folder, iconSide: iconSide, isHovered: hovered)
                 .jiggle(viewModel.isJiggling && isInteractive, seed: folder.id.uuidString)
-                .onTapGesture {
-                    let bounds = drag.rootBounds
-                    if bounds.width > 0 {
-                        viewModel.openFolderAnchor = UnitPoint(
-                            x: cellCenter.x / bounds.width,
-                            y: cellCenter.y / bounds.height
-                        )
-                    }
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                        LaunchpadViewModel.shared.openFolder = folder.id
+                .onTapGesture(perform: open)
+                .contextMenu {
+                    Button("打开", action: open)
+                    Divider()
+                    Button("解散文件夹", role: .destructive) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            library.dissolveFolder(folder.id)
+                        }
                     }
                 }
             if isInteractive {

@@ -71,6 +71,22 @@ struct Layout: Codable, Equatable, Sendable {
         return Layout(pages: pages)
     }
 
+    /// Replaces a folder slot with its member apps, in place.
+    func dissolvingFolder(_ id: UUID) -> Layout {
+        var pages = self.pages
+        for pageIndex in pages.indices {
+            for slotIndex in pages[pageIndex].indices {
+                guard case .folder(let folder) = pages[pageIndex][slotIndex], folder.id == id else { continue }
+                pages[pageIndex].replaceSubrange(
+                    slotIndex...slotIndex,
+                    with: folder.items.map { Slot.app(bundleID: $0) }
+                )
+                return Layout(pages: pages)
+            }
+        }
+        return self
+    }
+
     /// Restores the page-size invariant after a drag edit: pages overflowing
     /// `slotsPerPage` cascade their tail into the next page (original
     /// Launchpad behavior), empty trailing pages are trimmed.

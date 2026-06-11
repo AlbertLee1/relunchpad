@@ -233,3 +233,26 @@ import Testing
         #expect(SearchRanker.filter(apps, query: "saf").map(\.name) == ["Safari"])
     }
 }
+
+@Suite struct DissolveFolderTests {
+    @Test func folderSpillsInPlace() {
+        let id = UUID()
+        let layout = Layout(pages: [[
+            .app(bundleID: "a"),
+            .folder(FolderSlot(id: id, name: "F", items: ["x", "y"])),
+            .app(bundleID: "b"),
+        ]])
+        let result = layout.dissolvingFolder(id)
+        #expect(result.pages == [[
+            .app(bundleID: "a"),
+            .app(bundleID: "x"),
+            .app(bundleID: "y"),
+            .app(bundleID: "b"),
+        ]])
+    }
+
+    @Test func unknownFolderIsNoOp() {
+        let layout = Layout(pages: [[.app(bundleID: "a")]])
+        #expect(layout.dissolvingFolder(UUID()) == layout)
+    }
+}

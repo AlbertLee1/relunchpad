@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginNeedsApproval = LoginItem.requiresApproval
     @State private var showResetConfirm = false
+    @State private var systemPinchOn = SystemGestureChecker.systemPinchEnabled
 
     var body: some View {
         Form {
@@ -74,9 +75,23 @@ struct SettingsView: View {
 
                     pinchStatusRow
 
-                    Text("提示:系统的四指捏合会打开自带的「应用程序」视图,可在 系统设置 > 触控板 > 更多手势 中关闭,或保持五指与其错开。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if systemPinchOn {
+                        HStack {
+                            Label("系统抓拢手势仍开启,会同时打开自带的「应用程序」视图", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            Spacer()
+                            Button("一键关闭") {
+                                SystemGestureChecker.disableSystemPinch()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    systemPinchOn = SystemGestureChecker.systemPinchEnabled
+                                }
+                            }
+                            Button("打开触控板设置") {
+                                SystemGestureChecker.openTrackpadSettings()
+                            }
+                        }
+                        .font(.callout)
+                    }
                 }
             }
 

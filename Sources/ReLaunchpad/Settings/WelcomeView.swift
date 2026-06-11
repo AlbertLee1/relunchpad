@@ -7,6 +7,7 @@ struct WelcomeView: View {
 
     @ObservedObject private var pinchMonitor = TriggerCoordinator.shared.pinch
     @State private var launchAtLogin = LoginItem.isEnabled
+    @State private var systemPinchOn = SystemGestureChecker.systemPinchEnabled
 
     var body: some View {
         VStack(spacing: 22) {
@@ -61,6 +62,27 @@ struct WelcomeView: View {
                                 PermissionChecker.relaunchApp()
                             }
                             .controlSize(.small)
+                        }
+                    }
+                }
+                if systemPinchOn {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 18))
+                            .frame(width: 28)
+                            .foregroundStyle(.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("系统抓拢手势仍开启").fontWeight(.medium)
+                            Text("抓拢时会同时打开系统的「应用程序」视图")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("一键关闭") {
+                            SystemGestureChecker.disableSystemPinch()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                systemPinchOn = SystemGestureChecker.systemPinchEnabled
+                            }
                         }
                     }
                 }

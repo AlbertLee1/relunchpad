@@ -1,10 +1,15 @@
 import AppKit
 import SwiftUI
 
-/// Drives presentation state so SwiftUI can animate open/close like the
-/// original Launchpad (zoom + fade); the window itself orders in/out instantly.
+/// Drives presentation so SwiftUI can animate open/close like the original
+/// Launchpad. `progress` (0...1) is the single source of truth for the
+/// zoom+fade — button-style triggers animate it, while the trackpad pinch
+/// scrubs it directly so the UI tracks the fingers.
 @MainActor
 final class OverlayState: ObservableObject {
+    /// 0 = fully hidden, 1 = fully presented; the grid fades/zooms along it.
+    @Published var progress: Double = 0
+    /// Committed-open semantic state (focus, monitors active).
     @Published var isPresented = false
     /// Pre-blurred wallpaper of the screen the overlay is showing on.
     @Published var wallpaper: NSImage?
@@ -17,12 +22,15 @@ final class OverlayState: ObservableObject {
 final class OverlayWindowController: NSObject, NSWindowDelegate {
     static let shared = OverlayWindowController()
 
+    private enum InteractiveMode { case opening, closing }
+
     let state = OverlayState()
     private var window: OverlayWindow?
     private var hideWorkItem: DispatchWorkItem?
     private var scrollMonitor: Any?
     private var keyMonitor: Any?
     private var flagsMonitor: Any?
+    private var interactive: InteractiveMode?
 
     static let animationDuration: TimeInterval = 0.18
 
@@ -35,20 +43,131 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
     func show() {
         hideWorkItem?.cancel()
         hideWorkItem = nil
+        interactive = nil
 
+        prepareWindowFront()
+        LaunchpadViewModel.shared.reset()
+        commitOpen()
+
+        // Flip on the next runloop tick so SwiftUI animates from the closed state.
+        DispatchQueue.main.async { [self] in
+            withAnimation(.easeOut(duration: Self.animationDuration)) {
+                state.progress = 1
+            }
+        }
+    }
+
+    func hide() {
+        guard let window, window.isVisible, hideWorkItem == nil else { return }
+        interactive = nil
+        NSApp.presentationOptions = []
+        state.isPresented = false
+        withAnimation(.easeIn(duration: Self.animationDuration)) {
+            state.progress = 0
+        }
+        removeMonitors()
+        let item = DispatchWorkItem { [weak self] in
+            self?.window?.orderOut(nil)
+            self?.hideWorkItem = nil
+        }
+        hideWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.animationDuration, execute: item)
+    }
+
+    // MARK: - Interactive (pinch-driven) presentation
+
+    /// The pinch scrubs the open transition: the window is on screen but not
+    /// key, and `progress` follows the fingers (虚→实).
+    func interactiveOpenUpdate(progress: Double) {
+        switch interactive {
+        case .closing:
+            return
+        case nil:
+            guard !state.isPresented, hideWorkItem == nil else { return }
+            guard !isVisible else { return }
+            interactive = .opening
+            prepareWindowFront()
+            LaunchpadViewModel.shared.reset()
+        case .opening:
+            break
+        }
+        state.progress = progress
+    }
+
+    func interactiveOpenEnd(commit: Bool) {
+        guard interactive == .opening else { return }
+        interactive = nil
+        if commit {
+            commitOpen()
+            withAnimation(.easeOut(duration: 0.15)) {
+                state.progress = 1
+            }
+        } else {
+            withAnimation(.easeIn(duration: 0.15)) {
+                state.progress = 0
+            }
+            let item = DispatchWorkItem { [weak self] in
+                self?.window?.orderOut(nil)
+                self?.hideWorkItem = nil
+            }
+            hideWorkItem = item
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: item)
+        }
+    }
+
+    /// Spreading the fingers scrubs the close transition from the open state.
+    func interactiveCloseUpdate(progress: Double) {
+        guard state.isPresented || interactive == .closing else { return }
+        interactive = .closing
+        state.progress = 1 - progress
+    }
+
+    func interactiveCloseEnd(commit: Bool) {
+        guard interactive == .closing else { return }
+        interactive = nil
+        if commit {
+            hide()
+        } else {
+            withAnimation(.easeOut(duration: 0.15)) {
+                state.progress = 1
+            }
+        }
+    }
+
+    // MARK: - NSWindowDelegate
+
+    func windowDidResignKey(_ notification: Notification) {
+        hide()
+    }
+
+    // MARK: - Private
+
+    /// Positions the window on the mouse screen and orders it front without
+    /// activating the app (interactive opens must not steal focus).
+    private func prepareWindowFront() {
         let window = ensureWindow()
         let screen = screenUnderMouse()
         window.setFrame(screen.frame, display: true)
         state.wallpaper = WallpaperCache.shared.blurredWallpaper(for: screen)
         state.bottomInset = max(0, screen.visibleFrame.minY - screen.frame.minY)
+        state.progress = 0
+        window.orderFrontRegardless()
+    }
 
-        state.isPresented = false
+    /// Takes key/focus and installs event monitors — the overlay is now
+    /// semantically open.
+    private func commitOpen() {
+        guard let window else { return }
+        hideWorkItem?.cancel()
+        hideWorkItem = nil
         NSApp.presentationOptions = [.autoHideMenuBar]
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        state.isPresented = true
+        installMonitors()
+    }
 
-        LaunchpadViewModel.shared.reset()
-
+    private func installMonitors() {
         if scrollMonitor == nil {
             scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
                 if event.window === self.window {
@@ -73,21 +192,9 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
                 return event
             }
         }
-
-        // Flip on the next runloop tick so SwiftUI animates from the closed state.
-        DispatchQueue.main.async { [self] in
-            withAnimation(.easeOut(duration: Self.animationDuration)) {
-                state.isPresented = true
-            }
-        }
     }
 
-    func hide() {
-        guard let window, window.isVisible, hideWorkItem == nil else { return }
-        NSApp.presentationOptions = []
-        withAnimation(.easeIn(duration: Self.animationDuration)) {
-            state.isPresented = false
-        }
+    private func removeMonitors() {
         if let scrollMonitor {
             NSEvent.removeMonitor(scrollMonitor)
             self.scrollMonitor = nil
@@ -100,21 +207,7 @@ final class OverlayWindowController: NSObject, NSWindowDelegate {
             NSEvent.removeMonitor(flagsMonitor)
             self.flagsMonitor = nil
         }
-        let item = DispatchWorkItem { [weak self] in
-            self?.window?.orderOut(nil)
-            self?.hideWorkItem = nil
-        }
-        hideWorkItem = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.animationDuration, execute: item)
     }
-
-    // MARK: - NSWindowDelegate
-
-    func windowDidResignKey(_ notification: Notification) {
-        hide()
-    }
-
-    // MARK: - Private
 
     private func ensureWindow() -> OverlayWindow {
         if let window { return window }

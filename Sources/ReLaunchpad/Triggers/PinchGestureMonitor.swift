@@ -32,7 +32,7 @@ final class PinchGestureMonitor: ObservableObject {
         }
 
         task = Task { [weak self] in
-            var detector = PinchDetector(requiredFingers: fingers)
+            var tracker = PinchTracker(requiredFingers: fingers)
             for await touches in OMSManager.shared.touchDataStream {
                 guard let self else { return }
                 if Task.isCancelled { return }
@@ -40,19 +40,24 @@ final class PinchGestureMonitor: ObservableObject {
                 let points = touches
                     .filter { $0.state == .touching || $0.state == .making || $0.state == .starting }
                     .map { (x: Double($0.position.x), y: Double($0.position.y)) }
-                let event = detector.process(points: points, at: ProcessInfo.processInfo.systemUptime)
+                let phase = tracker.process(points: points, at: ProcessInfo.processInfo.systemUptime)
 
                 await MainActor.run {
                     if !self.sawData {
                         self.sawData = true
                         self.status = .active
                     }
-                    switch event {
-                    case .pinch:
-                        TriggerCoordinator.shared.requestShow(source: "pinch")
-                    case .spread:
-                        TriggerCoordinator.shared.requestHide(source: "pinch")
-                    case nil:
+                    let controller = OverlayWindowController.shared
+                    switch phase {
+                    case .active(.pinch, let progress):
+                        controller.interactiveOpenUpdate(progress: progress)
+                    case .ended(.pinch, let progress):
+                        controller.interactiveOpenEnd(commit: progress > 0.5)
+                    case .active(.spread, let progress):
+                        controller.interactiveCloseUpdate(progress: progress)
+                    case .ended(.spread, let progress):
+                        controller.interactiveCloseEnd(commit: progress > 0.5)
+                    case .idle:
                         break
                     }
                 }

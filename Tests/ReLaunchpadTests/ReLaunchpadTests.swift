@@ -155,51 +155,82 @@ import Testing
     }
 }
 
-@Suite struct PinchDetectorTests {
-    /// Five fingers arranged on a circle of the given radius.
-    func ring(_ radius: Double) -> [(x: Double, y: Double)] {
-        (0..<5).map { i in
-            let a = Double(i) / 5 * 2 * .pi
+@Suite struct PinchTrackerTests {
+    /// Fingers arranged symmetrically on a circle: mean spread == radius.
+    func ring(_ radius: Double, count: Int = 5) -> [(x: Double, y: Double)] {
+        (0..<count).map { i in
+            let a = Double(i) / Double(count) * 2 * .pi
             return (x: 0.5 + radius * cos(a), y: 0.5 + radius * sin(a))
         }
     }
 
-    @Test func contractionFiresPinch() {
-        var detector = PinchDetector(requiredFingers: 5)
-        #expect(detector.process(points: ring(0.30), at: 0.00) == nil)
-        #expect(detector.process(points: ring(0.25), at: 0.08) == nil)
-        #expect(detector.process(points: ring(0.15), at: 0.16) == .pinch)
+    func progress(_ phase: PinchPhase) -> Double? {
+        switch phase {
+        case .active(_, let p), .ended(_, let p): p
+        case .idle: nil
+        }
     }
 
-    @Test func expansionFiresSpread() {
-        var detector = PinchDetector(requiredFingers: 5)
-        #expect(detector.process(points: ring(0.15), at: 0.00) == nil)
-        #expect(detector.process(points: ring(0.25), at: 0.12) == .spread)
+    @Test func progressTracksContraction() {
+        var tracker = PinchTracker(requiredFingers: 5)
+        #expect(tracker.process(points: ring(0.30), at: 0.00) == .idle) // anchor frame
+        let early = tracker.process(points: ring(0.27), at: 0.05)
+        guard case .active(.pinch, let p1) = early else { Issue.record("expected active"); return }
+        #expect(abs(p1 - 0.125) < 0.02)
+        let late = tracker.process(points: ring(0.18), at: 0.10)
+        guard case .active(.pinch, let p2) = late else { Issue.record("expected active"); return }
+        #expect(p2 > p1)
+        #expect(tracker.process(points: ring(0.12), at: 0.15) == .active(direction: .pinch, progress: 1.0))
+        #expect(tracker.process(points: [], at: 0.20) == .ended(direction: .pinch, progress: 1.0))
     }
 
-    @Test func slowContractionOutsideWindowDoesNotFire() {
-        var detector = PinchDetector(requiredFingers: 5)
-        #expect(detector.process(points: ring(0.30), at: 0.0) == nil)
-        #expect(detector.process(points: ring(0.27), at: 0.4) == nil)
-        #expect(detector.process(points: ring(0.24), at: 0.8) == nil)
-        #expect(detector.process(points: ring(0.21), at: 1.2) == nil)
+    @Test func retreatReducesProgress() {
+        var tracker = PinchTracker(requiredFingers: 5)
+        _ = tracker.process(points: ring(0.30), at: 0.00)
+        let far = progress(tracker.process(points: ring(0.20), at: 0.05)) ?? 0
+        let back = progress(tracker.process(points: ring(0.27), at: 0.10)) ?? 1
+        #expect(back < far)
+        let ended = tracker.process(points: [], at: 0.15)
+        guard case .ended(.pinch, let final) = ended else { Issue.record("expected ended"); return }
+        #expect(final < 0.5) // release after retreating → caller cancels
     }
 
-    @Test func fourFingersDoNotTriggerFiveFingerDetector() {
-        var detector = PinchDetector(requiredFingers: 5)
-        let four = Array(ring(0.3).prefix(4))
-        #expect(detector.process(points: four, at: 0.0) == nil)
-        #expect(detector.process(points: Array(ring(0.1).prefix(4)), at: 0.1) == nil)
+    @Test func contactLossKeepsTracking() {
+        var tracker = PinchTracker(requiredFingers: 5)
+        #expect(tracker.process(points: ring(0.30), at: 0.00) == .idle)
+        guard case .active(.pinch, _) = tracker.process(points: ring(0.22, count: 4), at: 0.05) else {
+            Issue.record("tracking should survive a lost contact"); return
+        }
+        #expect(tracker.process(points: ring(0.12, count: 3), at: 0.10) == .active(direction: .pinch, progress: 1.0))
+        #expect(tracker.process(points: [], at: 0.15) == .ended(direction: .pinch, progress: 1.0))
     }
 
-    @Test func cooldownSuppressesImmediateRetrigger() {
-        var detector = PinchDetector(requiredFingers: 5)
-        _ = detector.process(points: ring(0.30), at: 0.0)
-        #expect(detector.process(points: ring(0.15), at: 0.1) == .pinch)
-        _ = detector.process(points: ring(0.30), at: 0.2)
-        #expect(detector.process(points: ring(0.15), at: 0.3) == nil) // within cooldown
-        _ = detector.process(points: ring(0.30), at: 1.2)
-        #expect(detector.process(points: ring(0.15), at: 1.3) == .pinch) // re-armed
+    @Test func fourFingerStartStaysIdle() {
+        var tracker = PinchTracker(requiredFingers: 5)
+        #expect(tracker.process(points: ring(0.30, count: 4), at: 0.00) == .idle)
+        #expect(tracker.process(points: ring(0.12, count: 4), at: 0.10) == .idle)
+        #expect(tracker.process(points: [], at: 0.20) == .idle)
+    }
+
+    @Test func spreadTracksExpansion() {
+        var tracker = PinchTracker(requiredFingers: 5)
+        #expect(tracker.process(points: ring(0.15), at: 0.00) == .idle)
+        #expect(tracker.process(points: ring(0.25), at: 0.08) == .active(direction: .spread, progress: 1.0))
+        #expect(tracker.process(points: [], at: 0.15) == .ended(direction: .spread, progress: 1.0))
+    }
+
+    @Test func cooldownAfterGestureEnd() {
+        var tracker = PinchTracker(requiredFingers: 5)
+        _ = tracker.process(points: ring(0.30), at: 0.00)
+        _ = tracker.process(points: ring(0.15), at: 0.10)
+        _ = tracker.process(points: [], at: 0.20) // ended
+        #expect(tracker.process(points: ring(0.30), at: 0.30) == .idle) // cooling down
+        #expect(tracker.process(points: ring(0.15), at: 0.40) == .idle)
+        _ = tracker.process(points: [], at: 0.45)
+        #expect(tracker.process(points: ring(0.30), at: 0.80) == .idle) // re-anchors
+        guard case .active(.pinch, _) = tracker.process(points: ring(0.18), at: 0.90) else {
+            Issue.record("expected re-armed tracking"); return
+        }
     }
 }
 
@@ -257,25 +288,3 @@ import Testing
     }
 }
 
-@Suite struct PinchContactLossTests {
-    func ring(_ radius: Double, count: Int = 5) -> [(x: Double, y: Double)] {
-        (0..<count).map { i in
-            let a = Double(i) / Double(count) * 2 * .pi
-            return (x: 0.5 + radius * cos(a), y: 0.5 + radius * sin(a))
-        }
-    }
-
-    @Test func contactLossMidPinchStillFires() {
-        var detector = PinchDetector(requiredFingers: 5)
-        #expect(detector.process(points: ring(0.30), at: 0.00) == nil)          // 5 指落下
-        #expect(detector.process(points: ring(0.22, count: 4), at: 0.08) == nil) // 收紧中丢 1 触点
-        #expect(detector.process(points: ring(0.12, count: 3), at: 0.16) == .pinch) // 只剩 3 触点仍触发
-    }
-
-    @Test func fourFingerStartNeverFiresFiveFingerPinch() {
-        var detector = PinchDetector(requiredFingers: 5)
-        #expect(detector.process(points: ring(0.30, count: 4), at: 0.00) == nil)
-        #expect(detector.process(points: ring(0.12, count: 4), at: 0.10) == nil)
-        #expect(detector.process(points: ring(0.08, count: 3), at: 0.20) == nil)
-    }
-}

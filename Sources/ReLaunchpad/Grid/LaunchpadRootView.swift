@@ -16,7 +16,7 @@ struct LaunchpadRootView: View {
             ZStack {
                 background
                     .ignoresSafeArea()
-                    .opacity(state.isPresented ? 1 : 0)
+                    .opacity(state.progress)
                     .contentShape(Rectangle())
                     .onTapGesture { handleBackgroundTap() }
 
@@ -28,8 +28,8 @@ struct LaunchpadRootView: View {
                     pageDots
                         .padding(.bottom, 28 + state.bottomInset)
                 }
-                .scaleEffect(state.isPresented ? 1.0 : 1.15)
-                .opacity(state.isPresented ? 1 : 0)
+                .scaleEffect(1.15 - 0.15 * state.progress)
+                .opacity(state.progress)
 
                 folderOverlay
                 dragGhost

@@ -256,3 +256,26 @@ import Testing
         #expect(layout.dissolvingFolder(UUID()) == layout)
     }
 }
+
+@Suite struct PinchContactLossTests {
+    func ring(_ radius: Double, count: Int = 5) -> [(x: Double, y: Double)] {
+        (0..<count).map { i in
+            let a = Double(i) / Double(count) * 2 * .pi
+            return (x: 0.5 + radius * cos(a), y: 0.5 + radius * sin(a))
+        }
+    }
+
+    @Test func contactLossMidPinchStillFires() {
+        var detector = PinchDetector(requiredFingers: 5)
+        #expect(detector.process(points: ring(0.30), at: 0.00) == nil)          // 5 指落下
+        #expect(detector.process(points: ring(0.22, count: 4), at: 0.08) == nil) // 收紧中丢 1 触点
+        #expect(detector.process(points: ring(0.12, count: 3), at: 0.16) == .pinch) // 只剩 3 触点仍触发
+    }
+
+    @Test func fourFingerStartNeverFiresFiveFingerPinch() {
+        var detector = PinchDetector(requiredFingers: 5)
+        #expect(detector.process(points: ring(0.30, count: 4), at: 0.00) == nil)
+        #expect(detector.process(points: ring(0.12, count: 4), at: 0.10) == nil)
+        #expect(detector.process(points: ring(0.08, count: 3), at: 0.20) == nil)
+    }
+}

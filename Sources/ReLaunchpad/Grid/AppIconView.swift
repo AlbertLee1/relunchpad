@@ -73,27 +73,39 @@ struct AppIconView: View {
             }
             .buttonStyle(.plain)
             .offset(x: -8, y: -8)
-            .transition(.scale.combined(with: .opacity))
         }
     }
 }
 
 /// Original Launchpad jiggle: a small rotation oscillation, phase varied per
 /// icon so the grid doesn't wobble in lockstep.
+///
+/// The rotation modifier only exists while jiggling (`if active`), so no
+/// repeatForever animation can outlive edit mode. The animation is keyed to
+/// the private `wobble` state, keeping it off sibling changes like the
+/// delete badge's insertion (which used to inherit it and blink).
 struct JiggleModifier: ViewModifier {
     let active: Bool
     let seed: String
 
+    @State private var wobble = false
+
     func body(content: Content) -> some View {
-        let phase = Double(abs(seed.hashValue) % 100) / 100
-        content
-            .rotationEffect(.degrees(active ? 1.7 : 0))
-            .animation(
-                active
-                    ? .easeInOut(duration: 0.13).repeatForever(autoreverses: true).delay(phase * 0.13)
-                    : .easeOut(duration: 0.1),
-                value: active
-            )
+        if active {
+            let phase = Double(abs(seed.hashValue) % 100) / 100
+            content
+                .rotationEffect(.degrees(wobble ? 1.7 : -1.7))
+                .animation(
+                    .easeInOut(duration: 0.13)
+                        .repeatForever(autoreverses: true)
+                        .delay(phase * 0.13),
+                    value: wobble
+                )
+                .onAppear { wobble = true }
+                .onDisappear { wobble = false }
+        } else {
+            content
+        }
     }
 }
 
